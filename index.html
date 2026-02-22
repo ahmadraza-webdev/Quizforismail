@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizForge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e11;
+    --surface: #18181d;
+    --border: #2a2a32;
+    --accent: #c8f542;
+    --accent2: #f5a742;
+    --text: #f0f0f0;
+    --muted: #6b6b80;
+    --correct: #42f58d;
+    --wrong: #f54242;
+    --radius: 12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── header ── */
+  header {
+    width: 100%;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    background: var(--border);
+    color: var(--muted);
+    padding: 3px 8px;
+    border-radius: 99px;
+    letter-spacing: 1px;
+  }
+
+  /* ── main container ── */
+  main {
+    width: 100%;
+    max-width: 720px;
+    padding: 40px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* ── screens ── */
+  .screen { display: none; flex-direction: column; gap: 24px; animation: fadeUp 0.35s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── loader screen ── */
+  .loader-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .loader-title .hl { color: var(--accent); }
+  .loader-subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .tab-btn.active { background: var(--border); color: var(--text); }
+
+  .tab-panel { display: none; flex-direction: column; gap: 16px; }
+  .tab-panel.active { display: flex; }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: #c8f54210;
+    color: var(--text);
+  }
+  .drop-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+  #file-input { display: none; }
+
+  .url-row { display: flex; gap: 10px; }
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-accent { background: var(--accent); color: #0e0e11; }
+  .btn-accent:hover { opacity: 0.88; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .format-hint {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .format-hint strong { color: var(--accent); }
+
+  .error-msg {
+    background: #f5424215;
+    border: 1px solid #f5424240;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--wrong);
+    font-size: 0.9rem;
+    display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  /* ── quiz screen ── */
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .quiz-topic {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .quiz-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 28px 24px;
+  }
+  .question-type-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-bottom: 16px;
+    background: var(--border);
+    color: var(--muted);
+  }
+  .question-type-tag.mcq { background: #c8f54218; color: var(--accent); }
+  .question-type-tag.truefalse { background: #f5a74218; color: var(--accent2); }
+
+  .question-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .option-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    text-align: left;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: #c8f54208;
+  }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct { border-color: var(--correct); background: #42f58d15; }
+  .option-btn.wrong   { border-color: var(--wrong);   background: #f5424215; }
+  .option-letter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 22px;
+  }
+  .option-btn.correct .option-letter { color: var(--correct); }
+  .option-btn.wrong   .option-letter { color: var(--wrong); }
+
+  .feedback-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: none;
+  }
+  .feedback-bar.visible { display: flex; }
+  .feedback-bar.correct { background: #42f58d15; border: 1px solid #42f58d40; color: var(--correct); }
+  .feedback-bar.wrong   { background: #f5424215; border: 1px solid #f5424240; color: var(--wrong); }
+
+  .next-row { display: flex; justify-content: flex-end; }
+
+  /* ── result screen ── */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+  .score-ring {
+    width: 140px;
+    height: 140px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+  .ring-bg { stroke: var(--border); }
+  .ring-fill { stroke: var(--accent); transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1); }
+  .score-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-pct { font-size: 2rem; font-weight: 800; }
+  .score-sub { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+
+  .result-title { font-size: 1.6rem; font-weight: 800; }
+  .result-meta { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--muted); }
+
+  .result-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* ── review list ── */
+  .review-list { display: flex; flex-direction: column; gap: 14px; }
+  .review-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .review-item.r-correct { border-left: 3px solid var(--correct); }
+  .review-item.r-wrong   { border-left: 3px solid var(--wrong); }
+  .review-q { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+  .review-detail {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .review-detail .ok  { color: var(--correct); }
+  .review-detail .bad { color: var(--wrong); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Quiz<span>Forge</span></div>
+  <div class="badge">CSV POWERED</div>
+</header>
+
+<main>
+
+  <!-- ══ LOADER SCREEN ══ -->
+  <section class="screen active" id="screen-load">
+    <div>
+      <div class="loader-title">Load your<br><span class="hl">question set.</span></div>
+      <div class="loader-subtitle" style="margin-top:10px;">Upload a CSV or paste a raw file URL to start the quiz.</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('upload')">⬆ Upload CSV</button>
+      <button class="tab-btn" onclick="switchTab('url')">🔗 From URL</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-upload">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <span class="drop-icon">📄</span>
+        <div>Drop your CSV here or <u>browse</u></div>
+        <div style="font-size:0.8rem;margin-top:6px;">UTF-8 encoded</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv,text/csv">
+    </div>
+
+    <div class="tab-panel" id="tab-url">
+      <div class="url-row">
+        <input class="url-input" id="csv-url" type="url" placeholder="https://raw.githubusercontent.com/you/repo/main/questions.csv">
+        <button class="btn btn-accent" onclick="loadFromURL()">Load</button>
+      </div>
+    </div>
+
+    <div class="format-hint">
+      <strong># Expected CSV format</strong><br>
+      question, option_a, option_b, option_c, option_d, answer, type<br><br>
+      <strong># MCQ example</strong><br>
+      What is 2+2?, 3, 4, 5, 6, B, mcq<br><br>
+      <strong># True/False example (leave option_c & option_d blank)</strong><br>
+      The sky is blue., True, False, , , A, truefalse<br><br>
+      <strong># Rules</strong><br>
+      • First row = header (skipped automatically)<br>
+      • answer = A / B / C / D (letter of correct option)
+    </div>
+
+    <div class="error-msg" id="error-msg">⚠ Could not parse the CSV. Check the format above.</div>
+
+    <button class="btn btn-accent" id="start-btn" disabled onclick="startQuiz()">Start Quiz →</button>
+  </section>
+
+  <!-- ══ QUIZ SCREEN ══ -->
+  <section class="screen" id="screen-quiz">
+    <div class="quiz-header">
+      <div class="quiz-topic" id="quiz-topic">Quiz</div>
+      <div class="quiz-counter" id="quiz-counter">1 / 10</div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <div class="question-card">
+      <div class="question-type-tag mcq" id="q-type-tag">MCQ</div>
+      <div class="question-text" id="q-text">Question text here</div>
+    </div>
+
+    <div class="options-grid" id="options-grid"></div>
+
+    <div class="feedback-bar" id="feedback-bar"></div>
+
+    <div class="next-row">
+      <button class="btn btn-accent" id="next-btn" style="display:none" onclick="nextQuestion()">Next →</button>
+    </div>
+  </section>
+
+  <!-- ══ RESULT SCREEN ══ -->
+  <section class="screen" id="screen-result">
+    <div class="result-card">
+      <div class="score-ring">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <circle class="ring-bg" cx="50" cy="50" r="42"/>
+          <circle class="ring-fill" id="ring-fill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="score-label">
+          <div class="score-pct" id="score-pct">0%</div>
+          <div class="score-sub" id="score-frac">0/0</div>
+        </div>
+      </div>
+      <div class="result-title" id="result-title">Quiz Complete!</div>
+      <div class="result-meta" id="result-meta"></div>
+      <div class="result-actions">
+        <button class="btn btn-accent" onclick="restartSame()">Retry ↺</button>
+        <button class="btn btn-outline" onclick="backToLoad()">New CSV</button>
+      </div>
+    </div>
+
+    <div style="font-size:1rem;font-weight:700;margin-top:8px;">Review answers</div>
+    <div class="review-list" id="review-list"></div>
+  </section>
+
+</main>
+
+<script>
+// ── state ──
+let questions = [];
+let current = 0;
+let score = 0;
+let answers = []; // {question, correct, chosen, isCorrect}
+
+// ── CSV PARSER ──
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) throw new Error('Too few rows');
+  const rows = lines.slice(1); // skip header
+  return rows.map((line, i) => {
+    const cols = splitCSVLine(line);
+    if (cols.length < 7) throw new Error(`Row ${i+2} has fewer than 7 columns`);
+    const [question, a, b, c, d, answer, type] = cols.map(s => s.trim());
+    const t = type.toLowerCase().replace(/[^a-z]/g,'');
+    const opts = t === 'truefalse'
+      ? [a, b].filter(Boolean)
+      : [a, b, c, d].filter(Boolean);
+    return { question, opts, answer: answer.toUpperCase(), type: t };
+  });
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let inQuote = false, cur = '';
+  for (let ch of line) {
+    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (ch === ',' && !inQuote) { result.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', (i===0) === (tab==='upload')));
+  document.getElementById('tab-upload').classList.toggle('active', tab==='upload');
+  document.getElementById('tab-url').classList.toggle('active', tab==='url');
+}
+
+// ── FILE UPLOAD ──
+const fileInput = document.getElementById('file-input');
+const dropZone = document.getElementById('drop-zone');
+
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) processFile(fileInput.files[0]); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+});
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => processCSVText(e.target.result, file.name.replace('.csv',''));
+  reader.readAsText(file);
+}
+
+// ── URL LOAD ──
+async function loadFromURL() {
+  const url = document.getElementById('csv-url').value.trim();
+  if (!url) return;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Fetch failed');
+    const text = await res.text();
+    processCSVText(text, 'Remote CSV');
+  } catch {
+    showError('Could not fetch the URL. Make sure it\'s a raw CSV link with CORS enabled.');
+  }
+}
+
+function processCSVText(text, name) {
+  hideError();
+  try {
+    questions = parseCSV(text);
+    if (!questions.length) throw new Error('Empty');
+    document.getElementById('quiz-topic').textContent = name.toUpperCase();
+    document.getElementById('start-btn').disabled = false;
+    dropZone.innerHTML = `<span class="drop-icon">✅</span><div><strong>${questions.length} questions</strong> loaded from ${name}</div>`;
+  } catch(e) {
+    showError('Could not parse the CSV. Check the format below.');
+    console.error(e);
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+function hideError() { document.getElementById('error-msg').classList.remove('visible'); }
+
+// ── QUIZ LOGIC ──
+function startQuiz() {
+  current = 0; score = 0; answers = [];
+  shuffle(questions);
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  const total = questions.length;
+
+  document.getElementById('quiz-counter').textContent = `${current+1} / ${total}`;
+  document.getElementById('progress-fill').style.width = `${(current/total)*100}%`;
+
+  const typeTag = document.getElementById('q-type-tag');
+  typeTag.textContent = q.type === 'truefalse' ? 'TRUE / FALSE' : 'MCQ';
+  typeTag.className = 'question-type-tag ' + (q.type === 'truefalse' ? 'truefalse' : 'mcq');
+
+  document.getElementById('q-text').textContent = q.question;
+
+  const letters = ['A','B','C','D'];
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span> ${opt}`;
+    btn.onclick = () => selectAnswer(letters[i], btn, q);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('feedback-bar').classList.remove('visible','correct','wrong');
+  document.getElementById('next-btn').style.display = 'none';
+}
+
+function selectAnswer(letter, btn, q) {
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  const correct = letter === q.answer;
+  const letters = ['A','B','C','D'];
+  const correctIdx = letters.indexOf(q.answer);
+
+  if (correct) {
+    btn.classList.add('correct');
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    const correctBtn = document.querySelectorAll('.option-btn')[correctIdx];
+    if (correctBtn) correctBtn.classList.add('correct');
+  }
+
+  const fb = document.getElementById('feedback-bar');
+  fb.className = 'feedback-bar visible ' + (correct ? 'correct' : 'wrong');
+  fb.textContent = correct ? '✓ Correct!' : `✗ The correct answer is ${q.answer}: ${q.opts[correctIdx]}`;
+  fb.classList.add('visible');
+
+  answers.push({
+    question: q.question,
+    chosen: `${letter}: ${q.opts[letters.indexOf(letter)]}`,
+    correct: `${q.answer}: ${q.opts[correctIdx]}`,
+    isCorrect: correct
+  });
+
+  document.getElementById('next-btn').style.display = 'inline-block';
+  document.getElementById('next-btn').textContent = current === questions.length - 1 ? 'See Results →' : 'Next →';
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    renderQuestion();
+  } else {
+    showResults();
+  }
+}
+
+// ── RESULTS ──
+function showResults() {
+  showScreen('screen-result');
+  const pct = Math.round((score/questions.length)*100);
+
+  document.getElementById('score-pct').textContent = pct + '%';
+  document.getElementById('score-frac').textContent = `${score} / ${questions.length}`;
+
+  const circumference = 263.9;
+  const offset = circumference - (pct/100)*circumference;
+  setTimeout(() => {
+    document.getElementById('ring-fill').style.strokeDashoffset = offset;
+  }, 100);
+
+  let title = pct === 100 ? '🏆 Perfect Score!' : pct >= 80 ? '🎉 Great Job!' : pct >= 60 ? '👍 Not Bad!' : '📚 Keep Studying!';
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-meta').textContent = `${questions.length} questions · ${score} correct · ${questions.length-score} wrong`;
+
+  const list = document.getElementById('review-list');
+  list.innerHTML = '';
+  answers.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'review-item ' + (a.isCorrect ? 'r-correct' : 'r-wrong');
+    div.innerHTML = `
+      <div class="review-q">${a.question}</div>
+      <div class="review-detail">
+        ${a.isCorrect
+          ? `<span class="ok">✓ Your answer: ${a.chosen}</span>`
+          : `<span class="bad">✗ Your answer: ${a.chosen}</span><br><span class="ok">✓ Correct: ${a.correct}</span>`
+        }
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function restartSame() {
+  current = 0; score = 0; answers = [];
+  shuffle(questions);
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function backToLoad() {
+  showScreen('screen-load');
+  document.getElementById('start-btn').disabled = true;
+  dropZone.innerHTML = `<span class="drop-icon">📄</span><div>Drop your CSV here or <u>browse</u></div><div style="font-size:0.8rem;margin-top:6px;">UTF-8 encoded</div>`;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
