@@ -3,18 +3,18 @@
     "name": "Science",
     "emoji": "🔬",
     "description": "Science: Keeping Warm Quiz",
-    "csvUrl": "./quizzes/Keeping warm.csv"
+    "csvUrl": "./quizzes/Science_quiz.csv"
   },
   {
     "name": "English",
     "emoji": "🌍",
     "description": "Grammar",
-    "csvUrl": "./quizzes/Grammar quiz.csv"
+    "csvUrl": "./quizzes/Grammar_quiz.csv"
   },
   {
     "name": "Maths",
     "emoji": "🧮",
     "description": "Decimals",
-    "csvUrl": "./quizzes/Decimals.csv"
+    "csvUrl": "./quizzes/Maths_Quiz.csv"
   }
 ]
