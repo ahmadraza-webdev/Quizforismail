@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Science",
+    "emoji": "🔬",
+    "description": "Science: Keeping Warm Quiz",
+    "csvUrl": "./quizzes/Keeping warm.csv"
+  },
+  {
+    "name": "English",
+    "emoji": "🌍",
+    "description": "Grammar",
+    "csvUrl": "./quizzes/Grammar quiz.csv"
+  },
+  {
+    "name": "Maths",
+    "emoji": "🧮",
+    "description": "Decimals",
+    "csvUrl": "./quizzes/Decimals.csv"
+  }
+]
